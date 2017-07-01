@@ -514,7 +514,7 @@ namespace ScreenToGif.Windows
             WindowState = WindowState.Minimized;
             ShowInTaskbar = false;
             Encoder.Minimize();
-            ClosePanel(removeEvent:true);
+            ClosePanel(removeEvent: true);
 
             if (UserSettings.All.NewRecorder)
             {
@@ -5193,10 +5193,22 @@ namespace ScreenToGif.Windows
                 var render = Dispatcher.Invoke(() =>
                 {
                     #region Text
+                    
+                    //Removes any duplicated modifier key.
+                    var keyList = new List<SimpleKeyGesture>();
+                    for (var i = 0; i < frame.KeyList.Count; i++)
+                    {
+                        //If this frame being added will be repeated next, ignore.
+                        if (frame.KeyList.Count > i + 1 && frame.KeyList[i + 1].Key == frame.KeyList[i].Key && frame.KeyList[i + 1].Modifiers == frame.KeyList[i].Modifiers)
+                            continue;
+
+                        //Removes the previous modifier key, if a combination is next to it: "LeftCtrl Control + A" will be "Control + A".
+                        if (i + 1 > frame.KeyList.Count - 1 || !frame.KeyList[i + 1].Modifiers.ToString().Contains(frame.KeyList[i].Key.ToString().Remove("Left", "Right").Replace("Ctrl", "Control").TrimStart('L').TrimStart('R')))
+                            keyList.Add(frame.KeyList[i]);
+                    }
 
                     //Update text with key strokes.
-                    KeyStrokesLabel.Text = frame.KeyList.Select(x => "" + Native.GetSelectKeyText(x.Key, x.Modifiers)).Aggregate((p, n) => p + UserSettings.All.KeyStrokesSeparator + n);
-
+                    KeyStrokesLabel.Text = keyList.Select(x => "" + Native.GetSelectKeyText(x.Key, x.Modifiers, x.IsUppercase)).Aggregate((p, n) => p + UserSettings.All.KeyStrokesSeparator + n);
                     KeyStrokesLabel.UpdateLayout();
 
                     //Renders the current Visual.
@@ -5679,7 +5691,7 @@ namespace ScreenToGif.Windows
             {
                 var path = Path.Combine(UserSettings.All.TemporaryFolder, "ScreenToGif", "Recording");
 
-                if (!File.Exists(path))
+                if (!Directory.Exists(path))
                     return;
 
                 var list = await Task.Factory.StartNew(() => Directory.GetDirectories(path).Select(x => new DirectoryInfo(x))
