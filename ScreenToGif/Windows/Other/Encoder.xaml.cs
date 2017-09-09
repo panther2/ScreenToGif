@@ -320,29 +320,34 @@ namespace ScreenToGif.Windows.Other
 
                         var gifParam = (GifParameters)param;
 
-                        //Get image bytes (with sizing), run the pixel analyzer, run the selected quantizer.
-                        //The pixel analizer runs from the end to the start. :/
-
                         #region Cut/Paint Unchanged Pixels
 
-                        if (gifParam.DetectUnchangedPixels && (gifParam.EncoderType == GifEncoderType.Legacy || gifParam.EncoderType == GifEncoderType.ScreenToGif))
+                        if (gifParam.EncoderType == GifEncoderType.Legacy || gifParam.EncoderType == GifEncoderType.ScreenToGif)
                         {
-                            Update(id, 0, FindResource("Encoder.Analyzing").ToString());
-
-                            if (gifParam.DummyColor.HasValue)
+                            if (gifParam.DetectUnchangedPixels)
                             {
-                                var color = Color.FromArgb(gifParam.DummyColor.Value.R, gifParam.DummyColor.Value.G, gifParam.DummyColor.Value.B);
+                                Update(id, 0, FindResource("Encoder.Analyzing").ToString());
 
-                                listFrames = ImageMethods.PaintTransparentAndCut(listFrames, color, id, tokenSource);
+                                if (gifParam.DummyColor.HasValue)
+                                {
+                                    var color = Color.FromArgb(gifParam.DummyColor.Value.R, gifParam.DummyColor.Value.G, gifParam.DummyColor.Value.B);
+
+                                    listFrames = ImageMethods.PaintTransparentAndCut(listFrames, color, id, tokenSource);
+                                }
+                                else
+                                {
+                                    listFrames = ImageMethods.CutUnchanged(listFrames, id, tokenSource);
+                                }
                             }
                             else
                             {
-                                listFrames = ImageMethods.CutUnchanged(listFrames, id, tokenSource);
+                                var size = listFrames[0].Path.ScaledSize();
+                                listFrames.ForEach(x => x.Rect = new Int32Rect(0, 0, (int)size.Width, (int)size.Height));
                             }
                         }
 
                         #endregion
-
+                        
                         switch (gifParam.EncoderType)
                         {
                             case GifEncoderType.ScreenToGif:
